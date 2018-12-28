@@ -58,7 +58,7 @@ class BusInfo(object):
             sorted([k, v] for k, v in departures.items())
         )
 
-        return departures
+        return (output["name"], departures)
 
 
 def human_timedelta(td):
@@ -108,8 +108,13 @@ def main():
     b = BusInfo(os.getenv("BI_APP_ID"), os.getenv("BI_APP_KEY"))
 
     for atco in args.atco:
-        for route, times in b.live_bus_query(atco).items():
-            print("{}: {}".format(route, ", ".join(human_timedelta(t) for t in times)))
+        name, routes = b.live_bus_query(atco)
+        print("{} ({}):".format(name, atco))
+        for route, times in routes.items():
+            print(
+                "- {}: {}".format(route, ", ".join(human_timedelta(t) for t in times))
+            )
+        print()
 
 
 if __name__ == "__main__":

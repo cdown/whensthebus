@@ -2,6 +2,7 @@
 
 """Get live UK bus times in your terminal or in a libnotify popup"""
 
+import argparse
 import datetime
 import urllib
 import json
@@ -86,11 +87,27 @@ def timedelta_from_departure(departure):
     return departure_time - DT_NOW
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "-a",
+        "--atco",
+        metavar="CODE",
+        action="append",
+        help="the ATCO codes to look up (eg. 490004733D)",
+        required=True,
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+
     b = BusInfo(os.getenv("BI_APP_ID"), os.getenv("BI_APP_KEY"))
 
-    for route, times in b.live_bus_query("490004733D").items():
-        print("{}: {}".format(route, ", ".join(human_timedelta(t) for t in times)))
+    for atco in args.atco:
+        for route, times in b.live_bus_query(atco).items():
+            print("{}: {}".format(route, ", ".join(human_timedelta(t) for t in times)))
 
 
 if __name__ == "__main__":

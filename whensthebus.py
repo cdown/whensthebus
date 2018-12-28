@@ -12,6 +12,7 @@ import collections
 import requests
 
 DT_NOW = datetime.datetime.now()
+DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
 
 
 class BusInfo(object):
@@ -78,12 +79,13 @@ def human_timedelta(td):
 
 
 def timedelta_from_departure(departure):
-    departure_time = datetime.datetime.strptime(
-        "{} {}".format(
-            departure["expected_departure_date"], departure["best_departure_estimate"]
-        ),
-        "%Y-%m-%d %H:%M",
-    )
+    dep_date = departure["expected_departure_date"]
+    if not dep_date:
+        dep_date = DATE_STR_NOW
+
+    to_parse = "{} {}".format(dep_date, departure["best_departure_estimate"])
+
+    departure_time = datetime.datetime.strptime(to_parse, "%Y-%m-%d %H:%M")
     return departure_time - DT_NOW
 
 

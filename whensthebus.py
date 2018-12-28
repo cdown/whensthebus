@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
-import requests
+"""Get live UK bus times in your terminal or in a libnotify popup"""
+
 import datetime
 import urllib
 import json
 import os
 import collections
+
+import requests
 
 DT_NOW = datetime.datetime.now()
 
@@ -16,11 +19,11 @@ class BusInfo(object):
         self.app_key = app_key
         self.api_base = api_base
 
-    def _call_api(self, path, extra_query_params=None):
+    def call_api(self, path, extra_query_params=None):
         parsed_url = urllib.parse.urlparse(self.api_base)
         query_params = {"app_id": self.app_id, "app_key": self.app_key}
         if extra_query_params:
-            query_params.extend(extra_query_params)
+            query_params.update(extra_query_params)
         parsed_url = parsed_url._replace(
             query=urllib.parse.urlencode(query_params), path=parsed_url.path + path
         )
@@ -33,15 +36,13 @@ class BusInfo(object):
             raise ValueError(r.text)
 
     def live_bus_query(self, atco):
-        route_to_time = {}
-
         path = "/uk/bus/stop/{}/live.json".format(atco)
-        json = self._call_api(path)
+        output = self.call_api(path)
 
         # route -> times
         departures = collections.defaultdict(list)
 
-        for sub in json["departures"].values():
+        for sub in output["departures"].values():
             for departure in sub:
                 dep_name = "{} to {}".format(departure["line"], departure["direction"])
                 departures[dep_name].append(timedelta_from_departure(departure))
@@ -56,12 +57,6 @@ class BusInfo(object):
         )
 
         return departures
-
-
-def flatten(multi):
-    for sub in multi:
-        for item in sub:
-            yield item
 
 
 def human_timedelta(td):

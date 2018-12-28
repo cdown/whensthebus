@@ -55,7 +55,7 @@ class BusInfo(object):
 
         # ...then sort the lines to show the closest.
         departures = collections.OrderedDict(
-            sorted([k, v] for k, v in departures.items())
+            sorted([(k, v) for k, v in departures.items()], key=lambda x: x[1])
         )
 
         return (output["name"], departures)

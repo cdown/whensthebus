@@ -75,6 +75,9 @@ def human_timedelta(td):
             magnitude_value, seconds = divmod(seconds, magnitude_remainder)
             parts.append("{} {}".format(magnitude_value, magnitude_name))
 
+    if not parts:
+        parts.append("Due")
+
     return ", ".join(parts)
 
 

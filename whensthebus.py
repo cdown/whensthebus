@@ -73,7 +73,7 @@ def human_timedelta(td):
     if not parts:
         parts.append("Due")
 
-    return ", ".join(parts)
+    return " ".join(parts)
 
 
 def timedelta_from_departure(departure):

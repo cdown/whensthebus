@@ -47,7 +47,7 @@ class BusInfo(object):
             output = self.call_api(path)
         except requests.exceptions.HTTPError as thrown_exc:
             if thrown_exc.response.status_code == 404:
-                raise ValueError("Unknown ATCO code: {}".format(atco))
+                raise ValueError("Unknown ATCO code: {}".format(atco)) from thrown_exc
             else:
                 raise
 

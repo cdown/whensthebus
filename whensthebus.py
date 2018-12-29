@@ -7,12 +7,19 @@ import datetime
 import urllib
 import json
 import os
+import queue
 import collections
+import multiprocessing
+import logging
 
 import requests
 
+log = logging.getLogger(__name__)
+
 DT_NOW = datetime.datetime.now()
 DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
+
+LiveBusSchedule = collections.namedtuple("LiveBusSchedule", ["name", "departures"])
 
 
 class BusInfo(object):
@@ -39,7 +46,7 @@ class BusInfo(object):
         except json.decoder.JSONDecodeError as thrown_exc:
             raise ValueError(r.text) from thrown_exc
 
-    def live_bus_query(self, atco):
+    def live_bus_query(self, atco, queue_obj):
         path = "/uk/bus/stop/{}/live.json".format(atco)
 
         output = self.call_api(path)
@@ -63,7 +70,40 @@ class BusInfo(object):
             sorted([(k, v) for k, v in departures.items()], key=lambda x: x[1])
         )
 
-        return (output["name"], departures)
+        queue_obj.put({atco: LiveBusSchedule(output["name"], departures)})
+
+    def live_bus_query_multi(self, atcos, timeout):
+        assert atcos, "BUG: no ATCOs?"
+
+        q = multiprocessing.Queue()
+
+        threads = [
+            multiprocessing.Process(target=self.live_bus_query, args=(atco, q))
+            for atco in atcos
+        ]
+
+        for t in threads:
+            t.start()
+
+        results = {}
+
+        while len(atcos) > len(results):
+            try:
+                result = q.get(block=True, timeout=timeout)
+            except queue.Empty:
+                # We'll handle this in the later check to check all ATCOs are
+                # returned
+                break
+            else:
+                results.update(result)
+
+        if len(atcos) != len(results):
+            log.error("No results for ATCOs: %s", ", ".join(set(atcos) - set(results)))
+
+        for t in threads:
+            t.terminate()
+
+        return results
 
 
 def human_timedelta(td):
@@ -104,6 +144,14 @@ def parse_args():
         help="the ATCO codes to look up (eg. 490004733D)",
         required=True,
     )
+    parser.add_argument(
+        "-t",
+        "--timeout",
+        action="append",
+        help="maximum number of seconds to wait for data to be returned (default: %(default)s)",
+        type=float,
+        default=5.0,
+    )
     return parser.parse_args()
 
 
@@ -112,16 +160,17 @@ def main():
 
     b = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))
 
-    for atco_idx, atco in enumerate(args.atco):
-        name, routes = b.live_bus_query(atco)
-        print("{} ({}):".format(name, atco))
+    results = b.live_bus_query_multi(args.atco, args.timeout)
 
-        for route, times in routes.items():
+    for atco_idx, (atco, lbs) in enumerate(results.items()):
+        print("{} ({}):".format(lbs.name, atco))
+
+        for route, times in lbs.departures.items():
             print(
                 "- {}: {}".format(route, ", ".join(human_timedelta(t) for t in times))
             )
 
-        if atco_idx + 1 < len(args.atco):
+        if atco_idx + 1 < len(results):
             print()
 
 

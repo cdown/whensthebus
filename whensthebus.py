@@ -21,7 +21,7 @@ DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
 LiveBusSchedule = collections.namedtuple("LiveBusSchedule", ["name", "departures"])
 
 
-class BusInfo(object):
+class BusInfo():
     """Functions that require API access, or process API data."""
 
     def __init__(self, app_id, app_key, api_base="http://transportapi.com/v3/"):

@@ -42,7 +42,14 @@ class BusInfo(object):
 
     def live_bus_query(self, atco):
         path = "/uk/bus/stop/{}/live.json".format(atco)
-        output = self.call_api(path)
+
+        try:
+            output = self.call_api(path)
+        except requests.exceptions.HTTPError as thrown_exc:
+            if thrown_exc.response.status_code == 404:
+                raise ValueError("Unknown ATCO code: {}".format(atco))
+            else:
+                raise
 
         # route -> times
         departures = collections.defaultdict(list)

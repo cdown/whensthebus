@@ -117,14 +117,17 @@ def main():
 
     b = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))
 
-    for atco in args.atco:
+    for atco_idx, atco in enumerate(args.atco):
         name, routes = b.live_bus_query(atco)
         print("{} ({}):".format(name, atco))
+
         for route, times in routes.items():
             print(
                 "- {}: {}".format(route, ", ".join(human_timedelta(t) for t in times))
             )
-        print()
+
+        if atco_idx + 1 < len(args.atco):
+            print()
 
 
 if __name__ == "__main__":

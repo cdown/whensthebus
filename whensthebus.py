@@ -34,7 +34,6 @@ class BusInfo(object):
         )
 
         r = requests.get(urllib.parse.urlunparse(parsed_url))
-        r.raise_for_status()
         try:
             return r.json()
         except json.decoder.JSONDecodeError as thrown_exc:
@@ -43,13 +42,9 @@ class BusInfo(object):
     def live_bus_query(self, atco):
         path = "/uk/bus/stop/{}/live.json".format(atco)
 
-        try:
-            output = self.call_api(path)
-        except requests.exceptions.HTTPError as thrown_exc:
-            if thrown_exc.response.status_code == 404:
-                raise ValueError("Unknown ATCO code: {}".format(atco)) from thrown_exc
-            else:
-                raise
+        output = self.call_api(path)
+        if "error" in output:
+            raise ValueError(output["error"])
 
         # route -> times
         departures = collections.defaultdict(list)

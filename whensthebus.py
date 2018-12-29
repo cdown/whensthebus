@@ -21,7 +21,7 @@ DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
 LiveBusSchedule = collections.namedtuple("LiveBusSchedule", ["name", "departures"])
 
 
-class BusInfo():
+class BusInfo:
     """Functions that require API access, or process API data."""
 
     def __init__(self, app_id, app_key, api_base="http://transportapi.com/v3/"):
@@ -186,6 +186,12 @@ def timedelta_from_departure(departure):
 
 
 def parse_args():
+    """
+    Take sys.argv and parse it with argparse's ArgumentParser.
+
+    Returns the arguments already parsed into a Namespace.
+    """
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "-a",
@@ -207,6 +213,12 @@ def parse_args():
 
 
 def main():
+    """
+    Use BusInfo to query TransportAPI, then lay out the found bus times to
+    stdout. Most of the specific formatting work is offloaded to other
+    functions, but the actual printing and layout work happens here.
+    """
+
     args = parse_args()
 
     bus = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))

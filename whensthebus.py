@@ -18,13 +18,17 @@ import requests
 DT_NOW = datetime.datetime.now()
 DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
 
-LiveBusSchedule = collections.namedtuple("LiveBusSchedule", ["name", "departures"])
+LiveBusSchedule = collections.namedtuple(
+    "LiveBusSchedule", ["name", "departures"]
+)
 
 
 class BusInfo:
     """Functions that require API access, or process API data."""
 
-    def __init__(self, app_id, app_key, api_base="http://transportapi.com/v3/"):
+    def __init__(
+        self, app_id, app_key, api_base="http://transportapi.com/v3/"
+    ):
         self.app_id = app_id
         self.app_key = app_key
         self.api_base = api_base
@@ -48,14 +52,17 @@ class BusInfo:
         if extra_query_params:
             query_params.update(extra_query_params)
         parsed_url = parsed_url._replace(
-            query=urllib.parse.urlencode(query_params), path=parsed_url.path + path
+            query=urllib.parse.urlencode(query_params),
+            path=parsed_url.path + path,
         )
 
         req_obj = requests.get(urllib.parse.urlunparse(parsed_url))
         try:
             return req_obj.json()
         except json.decoder.JSONDecodeError as thrown_exc:
-            raise ValueError("Invalid JSON: {}".format(req_obj.text)) from thrown_exc
+            raise ValueError(
+                "Invalid JSON: {}".format(req_obj.text)
+            ) from thrown_exc
 
     def live_bus_query(self, atco, queue_obj):
         """
@@ -79,8 +86,12 @@ class BusInfo:
 
         for sub in output["departures"].values():
             for departure in sub:
-                dep_name = "{} to {}".format(departure["line"], departure["direction"])
-                departures[dep_name].append(timedelta_from_departure(departure))
+                dep_name = "{} to {}".format(
+                    departure["line"], departure["direction"]
+                )
+                departures[dep_name].append(
+                    timedelta_from_departure(departure)
+                )
 
         # Sort to show the minimum time first...
         for tds in departures.values():
@@ -108,7 +119,9 @@ class BusInfo:
         queue_obj = multiprocessing.Queue()
 
         processes = [
-            multiprocessing.Process(target=self.live_bus_query, args=(atco, queue_obj))
+            multiprocessing.Process(
+                target=self.live_bus_query, args=(atco, queue_obj)
+            )
             for atco in atcos
         ]
 
@@ -129,7 +142,8 @@ class BusInfo:
 
         if len(atcos) != len(results):
             self.log.error(
-                "No results for ATCOs: %s", ", ".join(set(atcos) - set(results))
+                "No results for ATCOs: %s",
+                ", ".join(set(atcos) - set(results)),
             )
 
         for process in processes:
@@ -205,7 +219,8 @@ def parse_args():
         "-t",
         "--timeout",
         action="append",
-        help="maximum number of seconds to wait for data to be returned (default: %(default)s)",
+        help="maximum number of seconds to wait for data to be returned "
+        "(default: %(default)s)",
         type=float,
         default=5.0,
     )
@@ -230,7 +245,9 @@ def main():
 
         for route, times in lbs.departures.items():
             print(
-                "- {}: {}".format(route, ", ".join(human_timedelta(t) for t in times))
+                "- {}: {}".format(
+                    route, ", ".join(human_timedelta(t) for t in times)
+                )
             )
 
         if atco_idx + 1 < len(results):

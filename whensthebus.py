@@ -21,6 +21,9 @@ class BusInfo(object):
         self.app_key = app_key
         self.api_base = api_base
 
+        if not self.app_id or not self.app_key:
+            raise ValueError("Missing app credentials")
+
     def call_api(self, path, extra_query_params=None):
         parsed_url = urllib.parse.urlparse(self.api_base)
         query_params = {"app_id": self.app_id, "app_key": self.app_key}

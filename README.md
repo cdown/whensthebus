@@ -9,7 +9,7 @@ You must set `WTB_APP_ID` and `WTB_APP_KEY` to an app ID and app key valid at
 
 # Usage
 
-Pass atco codes with `-a`.
+Pass ATCO codes with `-a`. See below for how to find them.
 
 ```
 % WTB_APP_ID=xxx WTB_APP_KEY=xxx wtb -a 490004733D -a 4100008HAYRS
@@ -27,3 +27,17 @@ Haymarket Bus Station (R) (4100008HAYRS):
 - 45 to Dinnington: 19 min, 49 min, 1 hr 19 min
 - 43 to Morpeth Bus Station: 26 min
 ```
+
+# How do I find ATCO codes?
+
+- For London bus stops, it's in the URI. For example, in [this
+  URI](https://tfl.gov.uk/bus/stop/490004733D/canada-water-bus-station),
+  "490004733D" is the ATCO code.
+- For non-London, try the following:
+
+  1. Navigate to the bus stop on OpenStreetMap
+  2. On the right, click "layers"
+  3. Tick "map data"
+  4. Click on the bus stop on the map
+  5. On the left, you should see the ATCO code (possibly as something like
+     `naptan:AtcoCode`)

@@ -2,7 +2,7 @@
 
 from setuptools import setup
 
-with open("README.md") as readme_f:
+with open("README.rst") as readme_f:
     README = readme_f.read()
 
 with open("requirements.txt") as requirements_f:

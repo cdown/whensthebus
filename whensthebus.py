@@ -115,7 +115,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    b = BusInfo(os.getenv("BI_APP_ID"), os.getenv("BI_APP_KEY"))
+    b = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))
 
     for atco in args.atco:
         name, routes = b.live_bus_query(atco)

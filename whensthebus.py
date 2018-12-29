@@ -14,7 +14,6 @@ import logging
 
 import requests
 
-log = logging.getLogger(__name__)
 
 DT_NOW = datetime.datetime.now()
 DATE_STR_NOW = DT_NOW.strftime("%Y-%m-%d")
@@ -23,15 +22,27 @@ LiveBusSchedule = collections.namedtuple("LiveBusSchedule", ["name", "departures
 
 
 class BusInfo(object):
+    """Functions that require API access, or process API data."""
+
     def __init__(self, app_id, app_key, api_base="http://transportapi.com/v3/"):
         self.app_id = app_id
         self.app_key = app_key
         self.api_base = api_base
+        self.log = logging.getLogger(type(self).__name__)
 
         if not self.app_id or not self.app_key:
             raise ValueError("Missing app credentials")
 
     def call_api(self, path, extra_query_params=None):
+        """
+        Call TransportAPI v3.
+
+        path: A path, relative to api_base, to call.
+        extra_query_params: Desired query params other than app_{id,key}.
+
+        Returns a Python object parsed from the API's returned data.
+        """
+
         parsed_url = urllib.parse.urlparse(self.api_base)
         query_params = {"app_id": self.app_id, "app_key": self.app_key}
         if extra_query_params:
@@ -40,13 +51,23 @@ class BusInfo(object):
             query=urllib.parse.urlencode(query_params), path=parsed_url.path + path
         )
 
-        r = requests.get(urllib.parse.urlunparse(parsed_url))
+        req_obj = requests.get(urllib.parse.urlunparse(parsed_url))
         try:
-            return r.json()
+            return req_obj.json()
         except json.decoder.JSONDecodeError as thrown_exc:
-            raise ValueError(r.text) from thrown_exc
+            raise ValueError("Invalid JSON: {}".format(req_obj.text)) from thrown_exc
 
     def live_bus_query(self, atco, queue_obj):
+        """
+        Get live buses for a single ATCO code.
+
+        atco: The ATCO code to query.
+        queue_obj: The queue to put the obtained data on to.
+
+        This function doesn't return anything, as it's designed to be used in
+        multiprocessing. As such, the data is put onto the specified queue.
+        """
+
         path = "/uk/bus/stop/{}/live.json".format(atco)
 
         output = self.call_api(path)
@@ -73,23 +94,32 @@ class BusInfo(object):
         queue_obj.put({atco: LiveBusSchedule(output["name"], departures)})
 
     def live_bus_query_multi(self, atcos, timeout):
+        """
+        Asynchronous wrapper around live_bus_query.
+
+        atcos: The ATCOs to query.
+        timeout: How long to wait for a single process.
+
+        Returns: {atco: LiveBusSchedule}.
+        """
+
         assert atcos, "BUG: no ATCOs?"
 
-        q = multiprocessing.Queue()
+        queue_obj = multiprocessing.Queue()
 
-        threads = [
-            multiprocessing.Process(target=self.live_bus_query, args=(atco, q))
+        processes = [
+            multiprocessing.Process(target=self.live_bus_query, args=(atco, queue_obj))
             for atco in atcos
         ]
 
-        for t in threads:
-            t.start()
+        for process in processes:
+            process.start()
 
         results = {}
 
         while len(atcos) > len(results):
             try:
-                result = q.get(block=True, timeout=timeout)
+                result = queue_obj.get(block=True, timeout=timeout)
             except queue.Empty:
                 # We'll handle this in the later check to check all ATCOs are
                 # returned
@@ -98,16 +128,28 @@ class BusInfo(object):
                 results.update(result)
 
         if len(atcos) != len(results):
-            log.error("No results for ATCOs: %s", ", ".join(set(atcos) - set(results)))
+            self.log.error(
+                "No results for ATCOs: %s", ", ".join(set(atcos) - set(results))
+            )
 
-        for t in threads:
-            t.terminate()
+        for process in processes:
+            process.terminate()
 
         return results
 
 
-def human_timedelta(td):
-    seconds = int(td.total_seconds())
+def human_timedelta(tdelta):
+    """
+    Outputs a timedelta to a human readable string. This is optimised for live
+    transport, so the only magnitudes considered are hours and minutes. For
+    values under 60 seconds, "Due" is returned.
+
+    tdelta: The timedelta to humanise.
+
+    Returns a string with the human-readable timedelta.
+    """
+
+    seconds = int(tdelta.total_seconds())
     magnitudes = [("hr", 60 * 60), ("min", 60)]
 
     parts = []
@@ -124,6 +166,15 @@ def human_timedelta(td):
 
 
 def timedelta_from_departure(departure):
+    """
+    Given a departure, extract the relevant keys to work out how far away it is
+    from the current time. If the date is unknown, assume it is today.
+
+    departure: The departure to process.
+
+    Returns a timedelta showing how far away this time is from now.
+    """
+
     dep_date = departure["expected_departure_date"]
     if not dep_date:
         dep_date = DATE_STR_NOW
@@ -158,9 +209,9 @@ def parse_args():
 def main():
     args = parse_args()
 
-    b = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))
+    bus = BusInfo(os.getenv("WTB_APP_ID"), os.getenv("WTB_APP_KEY"))
 
-    results = b.live_bus_query_multi(args.atco, args.timeout)
+    results = bus.live_bus_query_multi(args.atco, args.timeout)
 
     for atco_idx, (atco, lbs) in enumerate(results.items()):
         print("{} ({}):".format(lbs.name, atco))

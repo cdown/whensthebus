@@ -37,8 +37,8 @@ class BusInfo(object):
         r.raise_for_status()
         try:
             return r.json()
-        except json.decoder.JSONDecodeError:
-            raise ValueError(r.text)
+        except json.decoder.JSONDecodeError as thrown_exc:
+            raise ValueError(r.text) from thrown_exc
 
     def live_bus_query(self, atco):
         path = "/uk/bus/stop/{}/live.json".format(atco)
